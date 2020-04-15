@@ -74,7 +74,7 @@ def create(self, username, machine_name, image, network, static_ip, default_gate
     resp = {'content' : {}, 'error': None, 'params': {}}
     logger.info('Task starting')
     try:
-        resp['content'] = vmware.create_dns(username, machine_name, image, network, logger)
+        resp['content'] = vmware.create_dns(username, machine_name, image, network, static_ip, default_gateway, netmask, dns, logger)
     except ValueError as doh:
         logger.error('Task failed: {}'.format(doh))
         resp['error'] = '{}'.format(doh)

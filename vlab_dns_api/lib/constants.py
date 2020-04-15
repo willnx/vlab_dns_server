@@ -25,7 +25,7 @@ DEFINED = OrderedDict([
             ('VLAB_DNS_IMAGES_DIR', environ.get('VLAB_DNS_IMAGES_DIR', '/images')),
             ('VLAB_VERIFY_TOKEN', environ.get('VLAB_VERIFY_TOKEN', False)),
             ('VLAB_DNS_WINDOWS_ADMIN', environ.get('VLAB_DNS_WINDOWS_ADMIN', 'Administrator')),
-            ('VLAB_DNS_WINDWOS_PW', environ.get('VLAB_DNS_WINDWOS_PW', 'ChangeMe')),
+            ('VLAB_DNS_WINDOWS_PW', environ.get('VLAB_DNS_WINDOWS_PW', 'ChangeMe')),
             ('VLAB_DNS_BIND9_ADMIN', environ.get('VLAB_DNS_BIND9_ADMIN', 'root')),
             ('VLAB_DNS_BIND9_PW', environ.get('VLAB_DNS_BIND9_PW', 'ChangeMe')),
           ])
