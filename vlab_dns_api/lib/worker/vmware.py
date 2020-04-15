@@ -118,7 +118,7 @@ def create_dns(username, machine_name, image, network, static_ip, default_gatewa
         if image.lower().startswith('windows'):
             vm_user, vm_password, the_os = const.VLAB_DNS_WINDOWS_ADMIN, const.VLAB_DNS_WINDOWS_PW, 'windows'
         else:
-            vm_user, vm_password, the_os = const.VLAB_DNS_BIND9_ADMIN, const.VLAB_DNS_BIND9_PW, 'centos'
+            vm_user, vm_password, the_os = const.VLAB_DNS_BIND9_ADMIN, const.VLAB_DNS_BIND9_PW, 'centos8'
         virtual_machine.config_static_ip(vcenter,
                                          the_vm,
                                          static_ip,
@@ -129,6 +129,8 @@ def create_dns(username, machine_name, image, network, static_ip, default_gatewa
                                          vm_password,
                                          logger,
                                          os=the_os)
+        if the_os == 'centos8':
+            _finish_bind_config(vcenter, the_vm, static_ip, logger)
 
         info = virtual_machine.get_info(vcenter, the_vm, username, ensure_ip=True)
         return  {the_vm.name: info}
@@ -158,7 +160,6 @@ def convert_name(name, to_version=False):
         return os.path.splitext(name)[0]
     else:
         return '{}.ova'.format(name)
-
 
 
 def update_network(username, machine_name, new_network):
@@ -193,3 +194,43 @@ def update_network(username, machine_name, new_network):
             raise ValueError(error)
         else:
             virtual_machine.change_network(the_vm, network)
+
+
+def _finish_bind_config(vcenter, the_vm, static_ip, logger):
+    """The records for Bind need to be adjust for the user's specific hostname and IP
+
+    :Returns: None
+
+    :param vcenter: The vCenter object
+    :type vcenter: vlab_inf_common.vmware.vcenter.vCenter
+
+    :param the_vm: The pyVmomi Virtual machine object
+    :type the_vm: vim.VirtualMachine
+
+    :param static_ip: The IP of the DNS server
+    :type static_ip: String
+
+    :param logger: An object for logging messages
+    :type logger: logging.LoggerAdapter
+    """
+    sed = '/usr/bin/sed'
+    args = "-i 's/{}/{}/g' {}"
+    forward_zone_file = '/var/named/vlab.local.db'
+    reverse_zone_file = '/var/named/vlab.local.rev'
+
+    forward_args1 = args.format('CHANGEME', static_ip, forward_zone_file)
+    forward_args2 = args.format('4\t', '5\t', forward_zone_file) # change the serial value
+    reverse_args1 = args.format('CHANGEME', static_ip, reverse_zone_file)
+    reverse_args2 = args.format('4\t', '5\t', reverse_zone_file) # change the serial value
+
+    systemctl = '/usr/bin/systemctl'
+    restart = 'restart named'
+
+    logger.info("Adjusting the Forward Lookup records for BIND")
+    virtual_machine.run_command(vcenter, the_vm, sed, arguments=forward_args1, user=const.VLAB_DNS_BIND9_ADMIN, password=const.VLAB_DNS_BIND9_PW)
+    virtual_machine.run_command(vcenter, the_vm, sed, arguments=forward_args2, user=const.VLAB_DNS_BIND9_ADMIN, password=const.VLAB_DNS_BIND9_PW)
+    logger.info("Adjusting the Reverse Lookup records for BIND")
+    virtual_machine.run_command(vcenter, the_vm, sed, arguments=reverse_args1, user=const.VLAB_DNS_BIND9_ADMIN, password=const.VLAB_DNS_BIND9_PW)
+    virtual_machine.run_command(vcenter, the_vm, sed, arguments=reverse_args2, user=const.VLAB_DNS_BIND9_ADMIN, password=const.VLAB_DNS_BIND9_PW)
+    logger.info("Restarting named service")
+    virtual_machine.run_command(vcenter, the_vm, systemctl, arguments=restart, user=const.VLAB_DNS_BIND9_ADMIN, password=const.VLAB_DNS_BIND9_PW)
